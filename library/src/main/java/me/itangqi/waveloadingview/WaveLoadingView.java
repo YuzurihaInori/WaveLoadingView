@@ -107,10 +107,14 @@ public class WaveLoadingView extends View {
     private void init(Context context, AttributeSet attrs, int defStyleAttr) {
         mContext = context;
         // Init Wave.
+        //矢量变化
         mShaderMatrix = new Matrix();
+
+        //波浪画笔创建
         mWavePaint = new Paint();
         // The ANTI_ALIAS_FLAG bit AntiAliasing smooths out the edges of what is being drawn,
         // but is has no impact on the interior of the shape.
+        //抗锯齿
         mWavePaint.setAntiAlias(true);
 
         // Init Animation
@@ -120,26 +124,33 @@ public class WaveLoadingView extends View {
         TypedArray attributes = context.obtainStyledAttributes(attrs, R.styleable.WaveLoadingView, defStyleAttr, 0);
 
         // Init ShapeType
+        //外圈形状 圆形or方形
         mShapeType = attributes.getInteger(R.styleable.WaveLoadingView_wlv_shapeType, DEFAULT_WAVE_SHAPE);
 
         // Init Wave
+        //波浪颜色
         mWaveColor = attributes.getColor(R.styleable.WaveLoadingView_wlv_waveColor, DEFAULT_WAVE_COLOR);
 
         // Init AmplitudeRatio
+        //振幅
         float amplitudeRatioAttr = attributes.getFloat(R.styleable.WaveLoadingView_wlv_waveAmplitude, DEFAULT_AMPLITUDE_RATIO) / 1000;
         mAmplitudeRatio = (amplitudeRatioAttr > DEFAULT_AMPLITUDE_RATIO) ? DEFAULT_AMPLITUDE_RATIO : amplitudeRatioAttr;
 
         // Init Progress
+        //水位进度
         mProgressValue = attributes.getInteger(R.styleable.WaveLoadingView_wlv_progressValue, DEFAULT_WAVE_PROGRESS_VALUE);
         setProgressValue(mProgressValue);
 
         // Init Border
+        //边框画笔
         mBorderPaint = new Paint();
         mBorderPaint.setAntiAlias(true);
         mBorderPaint.setStyle(Paint.Style.STROKE);
         mBorderPaint.setStrokeWidth(attributes.getDimension(R.styleable.WaveLoadingView_wlv_borderWidth, dp2px(DEFAULT_BORDER_WIDTH)));
         mBorderPaint.setColor(attributes.getColor(R.styleable.WaveLoadingView_wlv_borderColor, DEFAULT_WAVE_COLOR));
 
+
+        //文字 上 中 下 画笔
         // Init Title
         mTopTitlePaint = new Paint();
         mTopTitlePaint.setColor(attributes.getColor(R.styleable.WaveLoadingView_wlv_titleTopColor, DEFAULT_TITLE_COLOR));
@@ -166,6 +177,8 @@ public class WaveLoadingView extends View {
 
     @Override
     public void onDraw(Canvas canvas) {
+
+        //宽高取两者 较小的，// TODO: 2016/4/20          mCanvasSize = Math.min(canvas.getWidth(),canvas.getHeight());
         mCanvasSize = canvas.getWidth();
         if (canvas.getHeight() < mCanvasSize) {
             mCanvasSize = canvas.getHeight();
@@ -175,24 +188,28 @@ public class WaveLoadingView extends View {
         if (mWaveShader != null) {
             // First call after mShowWave, assign it to our paint.
             if (mWavePaint.getShader() == null) {
+                //给波浪画笔设置渲染，其实已有渲染
                 mWavePaint.setShader(mWaveShader);
             }
-
+            //让波浪动起来 -------------------------------start
             // Sacle shader according to waveLengthRatio and amplitudeRatio.
             // This decides the size(waveLengthRatio for width, amplitudeRatio for height) of waves.
             mShaderMatrix.setScale(1, mAmplitudeRatio / DEFAULT_AMPLITUDE_RATIO, 0, mDefaultWaterLevel);
             // Translate shader according to waveShiftRatio and waterLevelRatio.
             // This decides the start position(waveShiftRatio for x, waterLevelRatio for y) of waves.
-            mShaderMatrix.postTranslate(mWaveShiftRatio * getWidth(),
-                    (DEFAULT_WATER_LEVEL_RATIO - mWaterLevelRatio) * getHeight());
+            mShaderMatrix.postTranslate(mWaveShiftRatio * getWidth(),(DEFAULT_WATER_LEVEL_RATIO - mWaterLevelRatio) * getHeight());
+//            mShaderMatrix.setTranslate(mWaveShiftRatio * getWidth(),(DEFAULT_WATER_LEVEL_RATIO - mWaterLevelRatio) * getHeight());
 
             // Assign matrix to invalidate the shader.
             mWaveShader.setLocalMatrix(mShaderMatrix);
+
+            //让波浪动起来 -------------------------------end
 
             // Get borderWidth.
             float borderWidth = mBorderPaint.getStrokeWidth();
 
             // The default type is circle.
+            //画外框
             switch (mShapeType) {
                 case 0:
                     if (borderWidth > 0) {
@@ -243,6 +260,8 @@ public class WaveLoadingView extends View {
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
+        System.out.println("w = "+w+"  h = "+h);
+        System.out.println("oldw = "+oldw+"  oldh = "+oldh);
         mCanvasSize = w;
         if (h < mCanvasSize)
             mCanvasSize = h;
@@ -250,6 +269,7 @@ public class WaveLoadingView extends View {
     }
 
     private void updateWaveShader() {
+        System.out.println("updateWaveShader");
         // IllegalArgumentException: width and height must be > 0 while loading Bitmap from View
         // http://stackoverflow.com/questions/17605662/illegalargumentexception-width-and-height-must-be-0-while-loading-bitmap-from
         if (bitmapBuffer == null || haveBoundsChanged()) {
@@ -258,12 +278,19 @@ public class WaveLoadingView extends View {
             int width = getMeasuredWidth();
             int height = getMeasuredHeight();
             if(width > 0 && height > 0) {
+
+                //   2PI/宽
                 double defaultAngularFrequency = 2.0f * Math.PI / DEFAULT_WAVE_LENGTH_RATIO / width;
+                //默认振幅 = 高度*0.1
                 float defaultAmplitude = height * DEFAULT_AMPLITUDE_RATIO;
+                //默认水位 = 高度*0.5
                 mDefaultWaterLevel = height * DEFAULT_WATER_LEVEL_RATIO;
+                //默认水长 = 宽度
                 float defaultWaveLength = width;
 
+                //创建宽 高 的bitmap
                 Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+                //由于这里并不是ondraw 所以这里画的内容不会显示在view上，这里仅仅是做一个初始化，将内容，画到bitmap上
                 Canvas canvas = new Canvas(bitmap);
 
                 Paint wavePaint = new Paint();
@@ -272,26 +299,31 @@ public class WaveLoadingView extends View {
 
                 // Draw default waves into the bitmap.
                 // y=Asin(ωx+φ)+h
+                //终止点超过加1，应该是防止出现空白点
                 final int endX = width + 1;
                 final int endY = height + 1;
 
                 float[] waveY = new float[endX];
 
+                //波浪颜色调整
                 wavePaint.setColor(adjustAlpha(mWaveColor, 0.3f));
+                //从左到右 画点，练成线 0.1h*sin(2PI/W)+0.5h 上方是该函数走势，下方是矩形
                 for (int beginX = 0; beginX < endX; beginX++) {
                     double wx = beginX * defaultAngularFrequency;
                     float beginY = (float) (mDefaultWaterLevel + defaultAmplitude * Math.sin(wx));
                     canvas.drawLine(beginX, beginY, beginX, endY, wavePaint);
+                    //存档 x为角标，数组内容为y
                     waveY[beginX] = beginY;
                 }
 
                 wavePaint.setColor(mWaveColor);
-                final int wave2Shift = (int) (defaultWaveLength / 4);
-                for (int beginX = 0; beginX < endX; beginX++) {
-                    canvas.drawLine(beginX, waveY[(beginX + wave2Shift) % endX], beginX, endY, wavePaint);
-                }
+//                final int wave2Shift = (int) (defaultWaveLength / 4);
+//                for (int beginX = 0; beginX < endX; beginX++) {
+//                    canvas.drawLine(beginX, waveY[(beginX + wave2Shift) % endX], beginX, endY, wavePaint);
+//                }
 
                 // Use the bitamp to create the shader.
+                //创建一个bitmap渲染，以上面画布画的内容 Shader.TileMode.REPEAT画布内容重复 Shader.TileMode.CLAMP采色
                 mWaveShader = new BitmapShader(bitmap, Shader.TileMode.REPEAT, Shader.TileMode.CLAMP);
                 this.mWavePaint.setShader(mWaveShader);
             }
@@ -344,6 +376,8 @@ public class WaveLoadingView extends View {
             // Measure the text (beware: ascent is a negative number).
             result = mCanvasSize;
         }
+
+        // TODO: 2016/4/20  +2?
         return (result + 2);
     }
 
@@ -529,9 +563,13 @@ public class WaveLoadingView extends View {
 
     private void initAnimation() {
         // Wave waves infinitely.
+        // waveShiftRatio 变化持续调用setWaveShiftRatio invalidate()
+        //属性动画
         ObjectAnimator waveShiftAnim = ObjectAnimator.ofFloat(this, "waveShiftRatio", 0f, 1f);
+        //无限循环
         waveShiftAnim.setRepeatCount(ValueAnimator.INFINITE);
         waveShiftAnim.setDuration(1000);
+        //线性变化
         waveShiftAnim.setInterpolator(new LinearInterpolator());
 
         mAnimatorSet = new AnimatorSet();
